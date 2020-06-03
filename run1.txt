@@ -1,0 +1,65 @@
+Loading Datasets!
+	Loading Synthetics
+		Name: Sinusoid
+		AmbientDim: 3
+		IntrinsicDim: 1
+		SubsetSize: 600
+		SubsetSize*NumSubsets: 54000
+
+		Name: S
+		AmbientDim: 10
+		IntrinsicDim: 9
+		SubsetSize: 1200
+		SubsetSize*NumSubsets: 108000
+
+		Name: Gauss
+		AmbientDim: 6
+		IntrinsicDim: 6
+		SubsetSize: 800
+		SubsetSize*NumSubsets: 72000
+
+		Name: Moebius
+		AmbientDim: 3
+		IntrinsicDim: 2
+		SubsetSize: 120
+		SubsetSize*NumSubsets: 10800
+
+		Name: M12
+		AmbientDim: 72
+		IntrinsicDim: 12
+		SubsetSize: 1600
+		SubsetSize*NumSubsets: 144000
+
+Done Loading Datasets!
+
+
+Testing estimators on synth_Sinusoid
+	PH0ExactMST: 2.0210104669398348
+	PH0EstMST: 1.5042732135560184
+	GraphEst: 1
+
+
+Testing estimators on synth_HyperSphere
+	PH0ExactMST: 7.221420454352992
+	PH0EstMST: 7.260793823780183
+	GraphEst: 10
+
+
+Testing estimators on synth_Gauss
+	PH0ExactMST: 6.276224478731757
+	PH0EstMST: 6.543503198892489
+	GraphEst: 5
+
+
+Testing estimators on synth_Moebius
+	PH0ExactMST: 2.9287905076919074
+	PH0EstMST: 2.035839201341845
+	GraphEst: 2
+
+
+Testing estimators on synth_M12
+	PH0ExactMST: 15.927828879195715
+	PH0EstMST: 15.414155274586179
+	GraphEst: 47
+
+

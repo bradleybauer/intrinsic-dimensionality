@@ -15,9 +15,6 @@ th.backends.cudnn.benchmark = True
 th.backends.cudnn.enabled = True
 
 
-# Return a matrix or a list of matrices
-
-
 def loadMNIST(digit, fashion=False):
   transform = tv.transforms.Compose([
     tv.transforms.ToTensor(),
@@ -127,6 +124,10 @@ def loadImageNet():
   return dataset
 
 
+def loadWiki():
+  pass
+
+
 def loadSynthetic(whichSet):
   sets = ['Sinusoid', 'S', 'Gauss', 'Moebius', 'M12']
   intrinsicDims = [[1], [3, 5, 7, 9], [3, 4, 5, 6], [2], [12]]
@@ -147,8 +148,8 @@ def loadSynthetic(whichSet):
   print('\t\tSubsetSize:', subsetSize)
   print('\t\tSubsetSize*NumSubsets:', subsetSize * numSubsets)
 
-  # randomSubset = random.randint(0, numSubsets - 1)
-  randomSubset = 10
+  randomSubset = random.randint(0, numSubsets - 1)
+  # randomSubset = 10
   if len(ambientDims[whichSet]) > 1:
     filename = sets[whichSet] + str(intrinsicDim) + '_' + str(subsetSize) + '.BIN'
   else:
@@ -164,23 +165,31 @@ def loadSynthetic(whichSet):
     X = X[:, subsetSize * randomSubset:subsetSize * (randomSubset + 1)]
     dataset = np.ascontiguousarray(X.T)
   print()
-  return dataset
+  return setName, dataset
 
 
 def loadDatasets():
   print("Loading Datasets!")
   datasets = {}
-  print('\tLoading MNIST-twos')
-  datasets['mnist'] = loadMNIST(digit=2)
-  print('\tLoading FashionMNIST-shirts')
-  datasets['fashion'] = loadFashionMNIST(digit=2)
-  print('\tLoading LFW')
-  datasets['lfw'] = loadLFW()
-  print('\tLoading ImageNet')
-  datasets['imgnet'] = loadImageNet()
+
+  # print('\tLoading MNIST-twos')
+  # datasets['mnist-twos'] = loadMNIST(digit=2)
+  #
+  # print('\tLoading FashionMNIST-shirts')
+  # datasets['fashion-shirts'] = loadFashionMNIST(digit=2)
+  #
+  # print('\tLoading LFW')
+  # datasets['lfw'] = loadLFW()
+
+  # print('\tLoading ImageNet')
+  # datasets['imgnet'] = loadImageNet()
+
   print('\tLoading Synthetics')
   for i in range(0, 4 + 1):
-    datasets['synth' + str(i)] = loadSynthetic(i)
+    name, data = loadSynthetic(i)
+    if name == 'S':
+      name = 'HyperSphere'
+    datasets['synth_' + name] = data
 
   print("Done Loading Datasets!")
   print()

@@ -30,11 +30,11 @@ def getIDforPDF(pdf, pdfMaxDist, numBins, K, ambientDimension):
   pdfX = np.arange(numBins) * dx + dx / 2
   pdfMean = (pdf * pdfX).sum()
   pdfStd = np.sqrt((pdf * (pdfX - pdfMean) ** 2).sum())
-  print('pdfMean:', pdfMean)
-  print('pdfStd:', pdfStd)
+  # print('pdfMean:', pdfMean)
+  # print('pdfStd:', pdfStd)
 
   pdfMax = np.argmax(pdf) * dx
-  print('pdfArgMax:', pdfMax)
+  # print('pdfArgMax:', pdfMax)
 
   left_distr_x = pdfX[(pdfX > pdfMax - pdfStd) & (pdfX < pdfMax + pdfStd / 2.0)]
   left_distr_y = np.log(pdf[(pdfX > pdfMax - pdfStd) & (pdfX < pdfMax + pdfStd / 2.0)])
@@ -47,7 +47,10 @@ def getIDforPDF(pdf, pdfMaxDist, numBins, K, ambientDimension):
 
   left_distr_x = pdfX[(pdfX > fitMax - fitStd) & (pdfX < fitMax + fitStd / 2.)]
   left_distr_y = np.log(pdf[(pdfX > fitMax - fitStd) & (pdfX < fitMax + fitStd / 2.)])
-  coeff = np.polyfit(left_distr_x, left_distr_y, 2, full=False)
+  try:
+    coeff = np.polyfit(left_distr_x, left_distr_y, 2, full=False)
+  except:
+    return 'NA'
   a = coeff[0]
   b = coeff[1]
   c = coeff[2]
@@ -61,15 +64,20 @@ def getIDforPDF(pdf, pdfMaxDist, numBins, K, ambientDimension):
   # 3 Gaussian Fitting to determine ratio R
   left_distr_x = pdfX[(pdfX > fitMin) & (pdfX <= rM) & (pdf > 0.000001)] / fitMax
   left_distr_y = np.log(pdf[(pdfX > fitMin) & (pdfX <= rM) & (pdf > 0.000001)]) - (4 * a * c - b ** 2) / 4. / a
-
-  fit = curve_fit(func2, left_distr_x, left_distr_y)
-  ratio = np.sqrt(fit[0][0])
+  try:
+    fit = curve_fit(func2, left_distr_x, left_distr_y)
+  except:
+    return 'NA'
+  # ratio = np.sqrt(fit[0][0])
   y1 = func2(left_distr_x, fit[0][0])
   # 3
 
   # 4 Geodesics D-Hypersphere Distribution Fitting to determine Dfit
-  fit = curve_fit(func, left_distr_x, left_distr_y)
-  Dfit = fit[0][0] + 1
+  try:
+    fit = curve_fit(func, left_distr_x, left_distr_y)
+  except:
+    return 'NA'
+  # Dfit = fit[0][0] + 1
 
   y2 = func(left_distr_x, fit[0][0], fit[0][1], fit[0][2])
   # 4
@@ -87,14 +95,14 @@ def getIDforPDF(pdf, pdfMaxDist, numBins, K, ambientDimension):
   # 5
 
   # 6 Printing results
-  print('FITTING PARAMETERS:')
-  print('\t fitMax:', fitMax)
-  print('\t fitStd:', fitStd)
-  print('\t fitMin:', fitMin)
-  print('FITTING RESULTS:')
-  print('\t R:', ratio)
-  print('\t Dfit:', Dfit)
-  print('\t Dmin:', Dmin)
+  # print('FITTING PARAMETERS:')
+  # print('\t fitMax:', fitMax)
+  # print('\t fitStd:', fitStd)
+  # print('\t fitMin:', fitMin)
+  # print('FITTING RESULTS:')
+  # print('\t R:', ratio)
+  # print('\t Dfit:', Dfit)
+  # print('\t Dmin:', Dmin)
 
   plt.figure(2)
   plt.plot(left_distr_x, left_distr_y, 'o-', markersize=2, label='Representation (K=' + str(K) + ')')
@@ -106,25 +114,29 @@ def getIDforPDF(pdf, pdfMaxDist, numBins, K, ambientDimension):
   plt.grid(True)
   plt.show()
 
-  plt.figure(3)
-  plt.plot(res, 'o-', markersize=2, label='m (K=' + str(K) + ')')
-  plt.xlabel('Dimension')
-  plt.ylabel('Root Mean Squared Error')
-  plt.xticks(fontsize=15)
-  plt.yticks(fontsize=15)
-  plt.grid(True)
-  plt.show()
+  # plt.figure(3)
+  # plt.plot(res, 'o-', markersize=2, label='m (K=' + str(K) + ')')
+  # plt.xlabel('Dimension')
+  # plt.ylabel('Root Mean Squared Error')
+  # plt.xticks(fontsize=15)
+  # plt.yticks(fontsize=15)
+  # plt.grid(True)
+  # plt.show()
+
+  return Dmin
 
 
 def getPDF(knnRelation, numBins, numSamples, numberOfNodes):
   us, vs, ds = map(cudf.Series, knnRelation)
   us, vs, ds = cugraph.structure.symmetrize(us, vs, ds)
+  df = cudf.DataFrame({'source': us, 'destination': vs, 'weight': ds})
 
   G = cugraph.Graph()
-  G.add_edge_list(us, vs, ds)
+  G.from_cudf_edgelist(df, edge_attr='weight')
 
   pdf = np.zeros(numBins)
-  for i in tqdm(range(min(numSamples, numberOfNodes))):
+  # for i in tqdm(range(min(numSamples, numberOfNodes))):
+  for i in range(min(numSamples, numberOfNodes)):
     ssspResult: cudf.DataFrame = cugraph.sssp(G, i)
     distances: cudf.Series = ssspResult['distance']
     vertexIds: cudf.Series = ssspResult['vertex']
@@ -138,11 +150,11 @@ def getPDF(knnRelation, numBins, numSamples, numberOfNodes):
 
 
 def estimateIDGraph(X):
-  K = 9
+  K = 12
   ambientDimension = X.shape[1]
   numberOfNodes = X.shape[0]
-  numBins = max(min(numberOfNodes // 50, 1000), 100)
-  numSamples = 1000
+  numBins = max(min(numberOfNodes // 25, 1000), 100)
+  numSamples = 100
 
   knnRelation = getKnnRelation(K, X)
   pdfMaxDist, pdf = getPDF(knnRelation, numBins, numSamples, numberOfNodes)
@@ -151,4 +163,7 @@ def estimateIDGraph(X):
   plt.hist(np.arange(numBins) / (numBins - 1) * pdfMaxDist, weights=pdf, bins=numBins)
   plt.show()
 
-  getIDforPDF(pdf, pdfMaxDist, numBins, K, ambientDimension)
+  return getIDforPDF(pdf, pdfMaxDist, numBins, K, ambientDimension)
+
+# Bradley you modified /home/xdaimon/.local/lib/python3.7/site-packages/scipy/optimize/minpack.py:795
+# to silence a warning

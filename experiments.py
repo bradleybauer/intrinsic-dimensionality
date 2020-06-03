@@ -1,35 +1,78 @@
-from phEstimator import estimateIDPH0EstMST, estimateIDPH0ExactMST
-from graphEstimator import estimateIDGraph
-
-from loadData import loadDatasets
-
-
-def testDistancePdfEstimator():
-  pass
-  # print('Testing Distance PDF Estimator')
-  # datasets = loadDatasets()
-  # compare approx and exact pdf estimate on each dataset
-  # show results as table/plot
+from phEstimator import estimateIDPH0EstMST, estimateIDPH0ExactMST, knnMstWeight, euclideanMstWeight
+from graphEstimator import estimateIDGraph, getKnnRelation, getPDF
+from fisherEstimator import estimateIDFisher
+import numpy as np
 
 
-def testMstEstimator():
-  # Load many different datasets
-  # compare approx and exact mst estimate on each dataset
-  # show results as table/plot
-  pass
+def testDistancePdfEstimator(datasets):
+  print('Testing Distance PDF Estimator')
+  for name, data in datasets.items():
+    print('Dataset:', name)
+
+    numberOfNodes = data.shape[0]
+    numBins = max(min(numberOfNodes // 25, 1000), 100)
+    numSamplesSmall = 25
+    numSamplesBig = min(300, len(data))
+    K = 12
+
+    knnRelation = getKnnRelation(K, data)
+    estPDF = getPDF(knnRelation, numBins, numSamplesSmall, numberOfNodes)[1]
+    fullPDF = getPDF(knnRelation, numBins, numSamplesBig, numberOfNodes)[1]
+    error = np.linalg.norm(estPDF - fullPDF)
+    print('\tError:', error)
 
 
-def testIdEstimators():
-  datasets = loadDatasets()
+def testMstEstimator(datasets):
+  print('Testing MST Estimators')
+  print('Approx with K=20 vs Exact')
+  for name, data in datasets.items():
+    print('Dataset:', name, ' Size:', len(data))
+
+    size = min(len(data), 3000)
+    print('\tSubset size:', size)
+    X = data[:size]
+    np.random.shuffle(X)
+
+    approxWeight = knnMstWeight(X, K=20)
+    print('\t\tApprox:', approxWeight)
+
+    exactWeight = euclideanMstWeight(X)
+    print('\t\tExact :', exactWeight)
+
+  print('Approx with K=20 vs Approx with K=100')
+  for name, data in datasets.items():
+    print('Dataset:', name, ' Size:', len(data))
+
+    size = min(len(data), 100000)
+    print('\tSubset size:', size)
+    X = data[:size]
+    np.random.shuffle(X)
+
+    k20 = knnMstWeight(X, K=20)
+    print('\t\tApproxK20 :', k20)
+    k100 = knnMstWeight(X, K=100)
+    print('\t\tApproxK100:', k100)
+
+
+def testIdEstimators(datasets):
   for name, dataset in datasets.items():
-    exactMst = 'Timeout'
-    if dataset.shape[0] < 5000:
-      exactMst = estimateIDPH0ExactMST(dataset)
-    estMst = estimateIDPH0EstMST(dataset)
-    estGraph = estimateIDGraph(dataset)
+    print('Testing estimators on', name)
 
-    print('Dataset:', name, end='\t')
-    print('PH0ExactMST:', exactMst, end='\t')
-    print('PH0EstMST:', estMst, end='\t')
-    print('GraphExactPDF:', 'not impl', end='\t')
-    print('GraphEstPDF:', estGraph)
+    print('\tPH0ExactMST: ', end='')
+    exactMst = estimateIDPH0ExactMST(dataset)
+    print(exactMst)
+
+    print('\tPH0EstMST: ', end='')
+    estMst = estimateIDPH0EstMST(dataset)
+    print(estMst)
+
+    print('\tGraphEst: ', end='')
+    estGraph = estimateIDGraph(dataset)
+    print(estGraph)
+
+    print('\tFisherEst: ', end='')
+    estFisher = estimateIDFisher(dataset[:10000])
+    print(estFisher)
+
+    print()
+    print()
