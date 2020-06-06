@@ -1,0 +1,26 @@
+import ngtpy
+if not os.path.exists('../datasets/MNIST/KnnIndex'):
+  print('creating index')
+  ngtpy.create(path='../datasets/MNIST/KnnIndex', dimension=784, edge_size_for_creation=k, edge_size_for_search=k)
+  index = ngtpy.Index('../datasets/MNIST/KnnIndex') # open the index
+  for x in tqdm(xb):
+    index.insert(x.tolist())
+  print('Building Index')
+  index.build_index() # build index
+  print('Saving Index')
+  index.save() # save the index
+  print('Done!')
+else:
+  index = ngtpy.Index('../datasets/MNIST/KnnIndex') # open the index
+print('Creating knn graph')
+graph = {}
+for i,x in tqdm(enumerate(xb)):
+  result = index.search(x.tolist(), k+1)
+  neighbors = []
+  for rank,(id,pdfMaxDist) in enumerate(result):
+    if id == i:
+      continue
+    neighbors.append((id,pdfMaxDist))
+  graph[i] = neighbors[:k]
+print('Done!')
+return graph

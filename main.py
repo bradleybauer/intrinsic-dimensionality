@@ -1,16 +1,16 @@
 from loadData import loadDatasets
-from experiments import *
+from Experiments import *
+
 
 def main():
-  datasets = loadDatasets()
+    datasets = loadDatasets()
 
-  # testDistancePdfEstimator(datasets)
+    # testDistancePdfEstimator(datasets)
 
-  # testMstEstimator(datasets)
+    # testMstEstimator(datasets)
 
-  testIdEstimators(datasets)
+    testIdEstimators(datasets)
 
 
 if __name__ == '__main__':
-  main()
-
+    main()

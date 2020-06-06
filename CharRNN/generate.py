@@ -1,0 +1,55 @@
+import torch
+import os
+import argparse
+
+from helpers import *
+
+
+def generate(decoder, prime_str='A', predict_len=100, temperature=0.8):
+    decoder.eval()
+    prime_input = Variable(charTensor(prime_str).unsqueeze(0))
+
+    # a,b = decoder.init_hidden(1)
+    # a = a.cuda()
+    # b = b.cuda()
+    # hidden = (a,b)
+    hidden = None
+    prime_input = prime_input.cuda()
+    predicted = prime_str
+
+    # Use priming string to "build up" hidden state
+    for p in range(len(prime_str) - 1):
+        _, hidden = decoder(prime_input[:, p], hidden)
+
+    inp = prime_input[:, -1]
+
+    for p in range(predict_len):
+        output, hidden = decoder(inp, hidden)
+
+        # Sample from the network as a multinomial distribution
+        output_dist = output.data.view(-1).div(temperature).exp()
+        top_i = torch.multinomial(output_dist, 1)[0]
+
+        # Add predicted character to string and use as next input
+        predicted_char = all_characters[top_i]
+        predicted += predicted_char
+        inp = Variable(charTensor(predicted_char).unsqueeze(0))
+        inp = inp.cuda()
+
+    decoder.train()
+    return predicted
+
+
+# Run as standalone script
+if __name__ == '__main__':
+    # Parse command line arguments
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument('filename', type=str)
+    argparser.add_argument('-p', '--prime_str', type=str, default='A')
+    argparser.add_argument('-l', '--predict_len', type=int, default=100)
+    argparser.add_argument('-t', '--temperature', type=float, default=0.8)
+    args = argparser.parse_args()
+
+    decoder = torch.load(args.filename)
+    del args.filename
+    print(generate(decoder, **vars(args)))
