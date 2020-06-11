@@ -2,10 +2,9 @@ import numpy as np
 import faiss
 
 
-def getKnnRelation(K, X):
+def getKnnRelation(K, X, inCOOFormat=True):
     ambientDimension = X.shape[1]
 
-    # print('Building KNN Graph On GPU')
     resources = faiss.StandardGpuResources()
     resources.setCudaMallocWarning(False)
     index = faiss.IndexFlatL2(ambientDimension)
@@ -13,7 +12,9 @@ def getKnnRelation(K, X):
     index.add(X)
     distances, indices = index.search(X, K + 1)
     distances = np.sqrt(distances)  # faiss returns squared L2 norm
-    # print('Done!')
+
+    if not inCOOFormat:
+        return distances, indices
 
     # Store graph in COO sparse format
     graph_us = []

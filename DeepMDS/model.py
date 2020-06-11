@@ -63,7 +63,14 @@ class DeepMDS(nn.Module):
             name = 'block_' + str(sizeIn) + '_' + str(sizeOut)
             setattr(self, name, layer)
 
-    def forward(self, x, numLayersToTrain):
+    def forward(self, x):
+        if len(x.shape) > 2:
+            x = x.squeeze(2).squeeze(2)
+        for block in self.blocks:
+            x = block.forward(x)
+        return x
+
+    def trainForward(self, x, numLayersToTrain):
         activations = []
         for block, _ in zip(self.blocks, range(numLayersToTrain)):
             x = block.forward(x)

@@ -1,12 +1,12 @@
+from matplotlib import pyplot as plt
+from scipy.special import lambertw
+from scipy.special import gammainc
 import numpy as np
 import numba as nb
 import sklearn.decomposition as sk
 import warnings
 
 warnings.filterwarnings('ignore')
-from scipy.special import gammainc
-from scipy.special import lambertw
-from matplotlib import pyplot as plt
 
 
 def histc(X, bins):
@@ -236,15 +236,15 @@ def dimensionUniformSphere(py, alphas, number_of_data_points):
     return n, n_single_estimate, alfa_single_estimate
 
 
-def estimateIDFisher(X):
+def idFisher(X, plot=False):
     n_alpha, n_single, p_alpha, alphas, separable_fraction, Xp = \
         SeparabilityAnalysis(X,
                              ConditionalNumber=10,
                              ProjectOnSphere=True,
                              alphas=np.array([np.arange(.6, 1, .02)]),
-                             ProducePlots=True,
+                             ProducePlots=plot,
                              ncomp=False)
-    return n_single
+    return n_single[0]
 
 
 def SeparabilityAnalysis(X, ConditionalNumber=10, ProjectOnSphere=True, alphas=np.array([np.arange(.6, 1, .02)]),

@@ -20,43 +20,43 @@ th.backends.cudnn.benchmark = True
 th.backends.cudnn.enabled = True
 
 
-def loadMNIST(digit, fashion=False):
+# TODO if i return labels, make sure that i shuffle labels and data with same perm
+
+
+def loadMNIST(digit=-1, fashion=False):
     transform = tv.transforms.Compose([
         tv.transforms.ToTensor(),
         tv.transforms.Lambda(lambda x: x.numpy().ravel())
     ])
 
     if not fashion:
-        # Download training data
-        train = tv.Datasets.MNIST(root='Datasets/', train=True, download=True, transform=transform)
-        # Download testing data
-        test = tv.Datasets.MNIST(root='Datasets/', train=False, download=True, transform=transform)
+        train = tv.datasets.MNIST(root='Datasets/', train=True, download=True, transform=transform)
+        test = tv.datasets.MNIST(root='Datasets/', train=False, download=True, transform=transform)
     else:
-        # Download training data
-        train = tv.Datasets.FashionMNIST(root='Datasets/', train=True, download=True, transform=transform)
-        # Download testing data
-        test = tv.Datasets.FashionMNIST(root='Datasets/', train=False, download=True, transform=transform)
+        train = tv.datasets.FashionMNIST(root='Datasets/', train=True, download=True, transform=transform)
+        test = tv.datasets.FashionMNIST(root='Datasets/', train=False, download=True, transform=transform)
 
     # Take only a single digit
-    idx = train.targets == digit
-    train.targets = train.targets[idx]
-    train.data = train.data[idx]
-    idx = test.targets == digit
-    test.targets = test.targets[idx]
-    test.data = test.data[idx]
-    dataset = test
+    if digit != -1:
+        idx = train.targets == digit
+        train.targets = train.targets[idx]
+        train.data = train.data[idx]
+        idx = test.targets == digit
+        test.targets = test.targets[idx]
+        test.data = test.data[idx]
 
     dataset = th.utils.data.ConcatDataset([train, test])
     dataset = np.array(list(map(lambda x: x[0], dataset)))  # discard the label
+    labels = np.array(list(map(lambda x: x[1], dataset)))  # discard the label
 
     # vis = np.reshape(dataset[0], (28, 28))
     # plt.matshow(vis)
     # plt.show()
 
-    return dataset
+    return dataset, labels
 
 
-def loadFashionMNIST(digit):
+def loadFashionMNIST(digit=-1):
     return loadMNIST(digit, fashion=True)
 
 
@@ -64,7 +64,6 @@ def loadLFW():
     embeddingFile = 'Datasets/lfw/lfwEmbeddings.npy'
     if os.path.exists(embeddingFile):
         dataset = np.load(embeddingFile)
-        np.random.shuffle(dataset)
     else:
         print('\tEmbedding Images')
 
@@ -98,36 +97,35 @@ def loadLFW():
                 p.join()
             dataset = np.concatenate(embeddings)
             np.save(embeddingFile, dataset)
-    return dataset
+    np.random.shuffle(dataset)
+    return dataset, None
 
 
-def loadImageNet(loadLabels=False):
+def loadImageNetEmbeddings():
     embeddingFile = 'Datasets/imagenet/imageNetEmbeddings.npy'
     labelsFile = 'Datasets/imagenet/imageNetLabels.npy'
     if os.path.exists(embeddingFile):
         dataset = np.load(embeddingFile)
         labels = np.load(labelsFile)
-        np.random.shuffle(dataset)
     else:  # generate embeddings from images
         with th.no_grad():
-            normalize = tv.transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                                std=[0.229, 0.224, 0.225])
+            normalize = tv.transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
             dataset = th.utils.data.DataLoader(
-                tv.Datasets.ImageFolder('Datasets/imagenet/imagenet',
+                tv.datasets.ImageFolder('Datasets/imagenet/imagenet',
                                         tv.transforms.Compose([
-                                            tv.transforms.RandomResizedCrop(224),
+                                            tv.transforms.RandomResizedCrop(224),  # what about scale = (.5,1.)
                                             tv.transforms.ToTensor(),
                                             normalize,
                                         ])),
-                batch_size=64, shuffle=True, pin_memory=True)
+                batch_size=64, shuffle=True, pin_memory=True, num_workers=8)
             resnet = resnet34(pretrained=True, progress=True)
             classifier = list(resnet.children())[-1].eval().to('cuda')
             extractor = th.nn.Sequential(*list(resnet.children())[:-1]).eval().to('cuda')
             embeddings = []
             labels = []
             for xs, ys in tqdm(dataset):
-                embedding = extractor(xs.to('cuda')).squeeze(2).squeeze(2)
-                label = np.argmax(classifier(embedding).cpu().numpy(),axis=1)
+                embedding = extractor(xs.cuda()).squeeze(2).squeeze(2)
+                label = np.argmax(classifier(embedding).cpu().numpy(), axis=1)
                 embedding = embedding.cpu().numpy()
                 embeddings.append(embedding)
                 labels.append(label)
@@ -135,9 +133,13 @@ def loadImageNet(loadLabels=False):
             labels = np.concatenate(labels)
             np.save(embeddingFile, dataset)
             np.save(labelsFile, labels)
-    if loadLabels:
-        return dataset,labels
-    return dataset
+
+    # shuffle data
+    perm = np.random.permutation(len(dataset))
+    dataset = dataset[perm]
+    labels = labels[perm]
+
+    return dataset, labels
 
 
 # Maybe use Guassian,Cube,Cauchy
@@ -162,7 +164,6 @@ def loadSynthetic(whichSet):
     print('\t\tSubsetSize*NumSubsets:', subsetSize * numSubsets)
 
     randomSubset = random.randint(0, numSubsets - 1)
-    # randomSubset = 10
     if len(ambientDims[whichSet]) > 1:
         filename = sets[whichSet] + str(intrinsicDim) + '_' + str(subsetSize) + '.BIN'
     else:
@@ -178,6 +179,8 @@ def loadSynthetic(whichSet):
         X = X[:, subsetSize * randomSubset:subsetSize * (randomSubset + 1)]
         dataset = np.ascontiguousarray(X.T)
     print()
+
+    np.random.shuffle(dataset)
     return setName, dataset
 
 
@@ -208,51 +211,54 @@ def loadWiki():
         with th.no_grad():
             decoder = CharRNN()
             decoder.load_state_dict(th.load(modelPath))
-            decoder.cuda()
+            decoder = decoder.cuda()
             embeddings = []
             for i in tqdm(range(n_steps)):
                 data = randomDataPoint(chunk_len, batch_size, file, file_len)
                 embeddings.append(decoder.embed(data, n_hidden_to_keep))
             dataset = np.concatenate(embeddings, axis=1)
             np.save(embeddingFile, dataset)
-
     return dataset
 
 
 def loadDatasets():
     print("Loading Datasets!")
     datasets = {}
+    labels = {}
 
-    # print('\tLoading MNIST-twos')
-    # datasets['mnist-twos'] = loadMNIST(digit=2)
-    #
-    # print('\tLoading FashionMNIST-shirts')
-    # datasets['fashion-shirts'] = loadFashionMNIST(digit=2)
-    #
-    # print('\tLoading LFW')
-    # datasets['lfw'] = loadLFW()
+    print('\tLoading Synthetics')
+    for i in range(0, 4 + 1):
+        name, data = loadSynthetic(i)
+        if name == 'S':
+            name = 'HyperSphere'
+        datasets['synth_' + name] = data
 
-    print('\tLoading ImageNet')
-    datasets['imgnet'] = loadImageNet()
+    print('\tLoading MNIST')
+    datasets['mnist'], labels['mnist'] = loadMNIST()
 
-    # print('\tLoading Wiki')
-    # data = loadWiki()
-    # for t in range(0, 10):
-    #     x = data[t, :, :]
-    #     np.random.shuffle(x)
-    #     datasets['wiki_t' + str(t + 1)] = x
+    print('\tLoading MNIST-twos')
+    datasets['mnist-twos'], labels['mnist-twos'] = loadMNIST(digit=2)
 
-    # print('\tLoading Synthetics')
-    # for i in range(0, 4 + 1):
-    #     name, data = loadSynthetic(i)
-    #     if name == 'S':
-    #         name = 'HyperSphere'
-    #     datasets['synth_' + name] = data
+    print('\tLoading FashionMNIST-shirts')
+    datasets['fashion-shirts'], labels['fashion-shirts'] = loadFashionMNIST()
+
+    print('\tLoading LFW')
+    datasets['lfw'], labels['lfw'] = loadLFW()
+
+    print('\tLoading Wiki')
+    data = loadWiki()
+    for t in range(0, 10):
+        x = data[t, :, :]
+        np.random.shuffle(x)
+        datasets['wiki_t' + str(t + 1)] = x
+
+    print('\tLoading ImageNet Embeddings')
+    datasets['imgnet-embeddings'], labels['imgnet-embeddings'] = loadImageNetEmbeddings()
 
     print("Done Loading datasets!")
     print()
     print()
-    return datasets
+    return datasets, labels
 
 
 if __name__ == '__main__':

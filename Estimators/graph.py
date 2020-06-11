@@ -24,7 +24,7 @@ def func3(x, a, b, c):
     return np.exp(c) * np.sin(x / b * np.pi / 2.) ** a
 
 
-def getIDforPDF(pdf, pdfMaxDist, numBins, K, ambientDimension):
+def getIDforPDF(pdf, pdfMaxDist, numBins, K, ambientDimension, plot=False):
     dx = pdfMaxDist / numBins
 
     pdfX = np.arange(numBins) * dx + dx / 2
@@ -94,34 +94,35 @@ def getIDforPDF(pdf, pdfMaxDist, numBins, K, ambientDimension):
     y = func(left_distr_x, Dmin - 1, fit[0][1], 0)
     # 5
 
-    # 6 Printing results
-    # print('FITTING PARAMETERS:')
-    # print('\t fitMax:', fitMax)
-    # print('\t fitStd:', fitStd)
-    # print('\t fitMin:', fitMin)
-    # print('FITTING RESULTS:')
-    # print('\t R:', ratio)
-    # print('\t Dfit:', Dfit)
-    # print('\t Dmin:', Dmin)
+    if plot:
+        # 6 Printing results
+        # print('FITTING PARAMETERS:')
+        # print('\t fitMax:', fitMax)
+        # print('\t fitStd:', fitStd)
+        # print('\t fitMin:', fitMin)
+        # print('FITTING RESULTS:')
+        # print('\t R:', ratio)
+        # print('\t Dfit:', Dfit)
+        # print('\t Dmin:', Dmin)
 
-    plt.figure(2)
-    plt.plot(left_distr_x, left_distr_y, 'o-', markersize=2, label='Representation (K=' + str(K) + ')')
-    plt.plot(left_distr_x, y1, label='Gaussian (m={})'.format(int(Dmin)))
-    plt.plot(left_distr_x, y2, label='Hypersphere (m={})'.format(int(Dmin)))
-    plt.xlabel(r'$log (\frac{r}{r_{max}})$')
-    plt.ylabel(r'$log (\frac{p(r)}{p(r_{max})})$')
-    plt.legend()
-    plt.grid(True)
-    plt.show()
+        plt.figure(2)
+        plt.plot(left_distr_x, left_distr_y, 'o-', markersize=2, label='Representation (K=' + str(K) + ')')
+        plt.plot(left_distr_x, y1, label='Gaussian (m={})'.format(int(Dmin)))
+        plt.plot(left_distr_x, y2, label='Hypersphere (m={})'.format(int(Dmin)))
+        plt.xlabel(r'$log (\frac{r}{r_{max}})$')
+        plt.ylabel(r'$log (\frac{p(r)}{p(r_{max})})$')
+        plt.legend()
+        plt.grid(True)
+        plt.show()
 
-    # plt.figure(3)
-    # plt.plot(res, 'o-', markersize=2, label='m (K=' + str(K) + ')')
-    # plt.xlabel('Dimension')
-    # plt.ylabel('Root Mean Squared Error')
-    # plt.xticks(fontsize=15)
-    # plt.yticks(fontsize=15)
-    # plt.grid(True)
-    # plt.show()
+        # plt.figure(3)
+        # plt.plot(res, 'o-', markersize=2, label='m (K=' + str(K) + ')')
+        # plt.xlabel('Dimension')
+        # plt.ylabel('Root Mean Squared Error')
+        # plt.xticks(fontsize=15)
+        # plt.yticks(fontsize=15)
+        # plt.grid(True)
+        # plt.show()
 
     # return Dmin
     return Dfit
@@ -150,7 +151,7 @@ def getPDF(knnRelation, numBins, numSamples, numberOfNodes):
     return pdfMaxDist, pdf / pdf.sum()
 
 
-def estimateIDGraph(X):
+def idGraph(X, plot=False):
     K = 12
     numSamples = 100
 
@@ -162,11 +163,12 @@ def estimateIDGraph(X):
     knnRelation = getKnnRelation(K, X)
     pdfMaxDist, pdf = getPDF(knnRelation, numBins, numSamples, numberOfNodes)
 
-    # Show the estimated shortest distance pdf
-    plt.hist(np.arange(numBins) / (numBins - 1) * pdfMaxDist, weights=pdf, bins=numBins)
-    plt.show()
+    if plot:
+        # Show the estimated shortest distance pdf
+        plt.hist(np.arange(numBins) / (numBins - 1) * pdfMaxDist, weights=pdf, bins=numBins)
+        plt.show()
 
-    return getIDforPDF(pdf, pdfMaxDist, numBins, K, ambientDimension)
+    return getIDforPDF(pdf, pdfMaxDist, numBins, K, ambientDimension, plot=plot)
 
 # Bradley you modified /home/xdaimon/.local/lib/python3.7/site-packages/scipy/optimize/minpack.py:795
 # to silence a warning

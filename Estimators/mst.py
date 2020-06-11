@@ -23,26 +23,26 @@ def euclideanMstWeight(X):
     return mstWeight
 
 
-def estimateIDPH0EstMST(X):
-    return estimateID(X, knnMstWeight)
+def idMst(X):
+    return _estimateID(X, knnMstWeight)
 
 
-def estimateIDPH0ExactMST(X):
-    return estimateID(X, euclideanMstWeight)
+def idMstExact(X):
+    return _estimateID(X, euclideanMstWeight)
 
 
-def estimateID(X, getMstWeight):
+def _estimateID(X, getMstWeight):
     # increase either of these to get better estimation
     numSamples = 100
     numIters = 1
 
     logN = np.log(X.shape[0])
-    if logN <= 6:
+    if logN <= 4:
         print("Dataset too small")
         return 'Invalid'
 
     X = X[:]
-    ns = np.exp(np.arange(6, logN, (logN - 6) / numSamples)).astype(int).tolist()
+    ns = np.exp(np.arange(4, logN, (logN - 4) / numSamples)).astype(int).tolist()
 
     estimates = []
     for j in range(numIters):

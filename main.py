@@ -1,9 +1,13 @@
 from loadData import loadDatasets
-from Experiments import *
+from experiments import *
 
 
 def main():
-    datasets = loadDatasets()
+    datasets, labels = loadDatasets()
+
+    # testDeepMdsPreservesID()
+
+    # testAdvAttackImageNet()
 
     # testDistancePdfEstimator(datasets)
 
